@@ -2,6 +2,9 @@
 
 A Blink agent that generates daily news summaries for The Female Quotient (FQ) by researching trending articles from credible media outlets and posting them to Slack.
 
+<img width="1231" height="1333" alt="image" src="https://github.com/user-attachments/assets/c3c7458b-be6f-4d8a-9c7d-56a6ef664d43" />
+
+
 ## Capabilities
 
 ### Automated Daily Summaries
