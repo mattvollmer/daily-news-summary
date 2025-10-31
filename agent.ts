@@ -115,6 +115,8 @@ agent.on("chat", async ({ messages }) => {
         await app.client.chat.postMessage({
           channel,
           text,
+          unfurl_links: false,
+          unfurl_media: false,
         });
         return "Message posted successfully";
       },
