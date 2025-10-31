@@ -139,18 +139,27 @@ agent.on("chat", async ({ messages }) => {
       },
     }),
     webSearch: tool({
-      description: "Search the web for recent news articles and information. Use this to find trending articles from credible media outlets like The Atlantic, New York Times, Wall Street Journal, etc. Returns actual article titles, URLs, authors, and publication dates.",
+      description: "Search the web for recent news articles and information. Use this to find trending articles from credible media outlets like The Atlantic, New York Times, Wall Street Journal, etc. Returns actual article titles, URLs, authors, and publication dates. TIP: Run multiple searches with different queries to cover various FQ pillars and maximize relevant content discovery.",
       inputSchema: z.object({
         query: z.string().describe("The search query for news articles"),
-        numResults: z.number().default(10).describe("Number of results to return (default: 10)"),
+        numResults: z.number().default(15).describe("Number of results to return (default: 15)"),
+        startPublishedDate: z.string().optional().describe("Start date for articles in YYYY-MM-DD format (e.g., '2025-01-15'). Defaults to 7 days ago."),
       }),
-      execute: async ({ query, numResults }) => {
+      execute: async ({ query, numResults, startPublishedDate }) => {
         const exaApiKey = process.env.EXA_API_KEY;
         if (!exaApiKey) {
           return "Error: EXA_API_KEY environment variable not set. Please add it to .env.local or .env.production";
         }
 
         try {
+          // Default to articles from the last 7 days
+          let startDate = startPublishedDate;
+          if (!startDate) {
+            const date = new Date();
+            date.setDate(date.getDate() - 7);
+            startDate = date.toISOString().split('T')[0];
+          }
+
           const exa = new Exa(exaApiKey);
           const result = await exa.searchAndContents(query, {
             type: "neural",
@@ -158,6 +167,30 @@ agent.on("chat", async ({ messages }) => {
             numResults,
             text: { maxCharacters: 500 },
             livecrawl: "always",
+            startPublishedDate: startDate,
+            // Focus on credible news sources
+            includeDomains: [
+              "theatlantic.com",
+              "nytimes.com",
+              "wsj.com",
+              "washingtonpost.com",
+              "newyorker.com",
+              "theguardian.com",
+              "npr.org",
+              "bbc.com",
+              "reuters.com",
+              "apnews.com",
+              "forbes.com",
+              "fortune.com",
+              "bloomberg.com",
+              "businessinsider.com",
+              "vox.com",
+              "axios.com",
+              "politico.com",
+              "time.com",
+              "economist.com",
+              "harvardbusinessreview.org",
+            ],
           });
 
           const articles = result.results.map((item: any) => ({
@@ -288,6 +321,10 @@ Explores how women are redefining friendship post-pandemic, prioritizing honesty
 - The response should start IMMEDIATELY with: "Top articles for today, [date]:"
 - Then list 5-10 articles in the format above
 - Use getCurrentDate tool FIRST to know what day it is
+- **SEARCH STRATEGY**: Run multiple targeted webSearch queries to maximize coverage:
+  - Search for each pillar topic individually (e.g., "women workplace equality 2025", "women's health policy", "working mothers challenges")
+  - Search for general trending topics (e.g., "women leadership news", "gender equality workplace")
+  - This approach gives you a larger pool of articles to choose from after deduplication
 - Use the webSearch tool to find trending articles from credible sources
 - **NEVER fabricate or hallucinate URLs, article titles, authors, or content**
 - Only include articles that you have actual information about from search results

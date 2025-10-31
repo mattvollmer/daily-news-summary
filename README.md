@@ -35,8 +35,15 @@ The agent curates articles around these themes:
 
 ### `webSearch`
 Searches the web for recent news articles using Exa API
-- **Parameters:** `query` (string), `numResults` (number, default: 10)
+- **Parameters:** 
+  - `query` (string) - The search query for news articles
+  - `numResults` (number, default: 15) - Number of results to return
+  - `startPublishedDate` (string, optional) - Start date in YYYY-MM-DD format (defaults to 7 days ago)
 - **Returns:** Article metadata including title, URL, author, publication date, and summary
+- **Features:**
+  - Automatically filters to articles from the last 7 days
+  - Restricts results to 20 credible news sources (NYT, The Atlantic, WSJ, Guardian, Forbes, etc.)
+  - Supports multiple searches for comprehensive coverage across FQ pillars
 
 ### `getCurrentDate`
 Gets the current date and time
@@ -124,6 +131,22 @@ Brief summary of the article.
 - Why it matters for FQ community
 - How it could inspire discussion
 ```
+
+## Content Discovery Strategy
+
+### Credible News Sources
+The agent searches only from these verified outlets:
+- **Major newspapers:** NYT, WSJ, Washington Post, The Guardian
+- **News agencies:** Reuters, AP, NPR, BBC
+- **Business outlets:** Forbes, Fortune, Bloomberg, Business Insider, HBR
+- **Quality analysis:** The Atlantic, New Yorker, Vox, Axios, Politico, Time, The Economist
+
+### Search Strategy
+The agent runs multiple targeted searches to maximize relevant content:
+- Searches each FQ pillar topic individually (e.g., "women workplace equality", "women's health policy")
+- Searches general trending topics (e.g., "women leadership news")
+- Defaults to articles published in the last 7 days
+- Returns 15 results per search for a larger pool after deduplication
 
 ## Article Deduplication
 
