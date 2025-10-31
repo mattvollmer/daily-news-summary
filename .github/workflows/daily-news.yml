@@ -15,4 +15,4 @@ jobs:
         run: |
           curl -X POST \
             -H "Content-Type: application/json" \
-            https://7763f48c-2b51-48a0-82aa-6232d2bdeb89.agent.blink.host/daily-news
+            ${{ secrets.AGENT_WEBHOOK_URL }}
