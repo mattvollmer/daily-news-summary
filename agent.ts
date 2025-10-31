@@ -175,6 +175,47 @@ agent.on("chat", async ({ messages }) => {
         }
       },
     }),
+    checkPreviouslySharedArticles: tool({
+      description: "Check which article URLs have been previously shared in daily summaries. Use this to avoid sharing the same articles twice.",
+      inputSchema: z.object({
+        urls: z.array(z.string()).describe("Array of article URLs to check"),
+      }),
+      execute: async ({ urls }) => {
+        const previouslyShared: string[] = [];
+        const notShared: string[] = [];
+        
+        for (const url of urls) {
+          const key = `article:${url}`;
+          const exists = await agent.store.get(key);
+          if (exists) {
+            previouslyShared.push(url);
+          } else {
+            notShared.push(url);
+          }
+        }
+        
+        return {
+          previouslyShared,
+          notShared,
+          message: `${previouslyShared.length} articles were previously shared. ${notShared.length} are new.`,
+        };
+      },
+    }),
+    recordSharedArticles: tool({
+      description: "Record article URLs that have been shared in the daily summary. Call this AFTER posting the summary to Slack.",
+      inputSchema: z.object({
+        urls: z.array(z.string()).describe("Array of article URLs that were shared"),
+      }),
+      execute: async ({ urls }) => {
+        const now = new Date().toISOString();
+        for (const url of urls) {
+          const key = `article:${url}`;
+          // Store permanently to never share the same article twice
+          await agent.store.set(key, now);
+        }
+        return `Recorded ${urls.length} articles as shared on ${now}`;
+      },
+    }),
   };
   
   const lastMessage = messages[messages.length - 1];
@@ -251,7 +292,9 @@ Explores how women are redefining friendship post-pandemic, prioritizing honesty
 - **NEVER fabricate or hallucinate URLs, article titles, authors, or content**
 - Only include articles that you have actual information about from search results
 - If you cannot find real articles, say so rather than making them up
-- After creating the summary, use postToSlackChannel to post it
+- **IMPORTANT: Before including articles in your summary, use checkPreviouslySharedArticles to filter out any articles that were previously shared**
+- Only include NEW articles that haven't been shared before
+- After posting the summary to Slack, use recordSharedArticles to track the URLs you shared
 
 ## How to Interact
 
