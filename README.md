@@ -84,7 +84,7 @@ Create a `.env.local` file with:
 SLACK_BOT_TOKEN=xoxb-your-token
 SLACK_SIGNING_SECRET=your-secret
 EXA_API_KEY=your-exa-key
-ANTHROPIC_API_KEY=your-key
+AI_GATEWAY_API_KEY=your-key
 ```
 
 ### Webhook Setup
