@@ -8,13 +8,16 @@
     "deploy": "blink deploy"
   },
   "devDependencies": {
-    "zod": "latest",
+    "@blink-sdk/slack": "latest",
+    "@slack/bolt": "latest",
+    "@types/node": "latest",
     "ai": "latest",
     "blink": "latest",
     "esbuild": "latest",
-    "@types/node": "latest",
     "typescript": "latest",
-    "@slack/bolt": "latest",
-    "@blink-sdk/slack": "latest"
+    "zod": "latest"
+  },
+  "dependencies": {
+    "exa-js": "^2.0.0"
   }
 }

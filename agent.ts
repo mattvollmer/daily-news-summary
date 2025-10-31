@@ -4,6 +4,7 @@ import * as slack from "@blink-sdk/slack";
 import { App } from "@slack/bolt";
 import { tool } from "ai";
 import { z } from "zod";
+import Exa from "exa-js";
 
 const receiver = new slack.Receiver();
 const app = new App({
@@ -82,7 +83,7 @@ agent.on("request", async (request) => {
             parts: [
               {
                 type: "text",
-                text: `Generate a daily news summary and post it to Slack channel ${CHANNEL_ID}. Use your tools to research the latest news and create an engaging summary. After analyzing, post the formatted summary to the Slack channel using the postToSlackChannel tool.`,
+                text: `It's time to generate today's daily news summary. Research trending articles from credible sources and create the summary according to the FQ pillars and format specified in your system prompt. Post the formatted summary to Slack channel ${CHANNEL_ID} using the postToSlackChannel tool.`,
               },
             ],
           },
@@ -118,6 +119,60 @@ agent.on("chat", async ({ messages }) => {
         return "Message posted successfully";
       },
     }),
+    getCurrentDate: tool({
+      description: "Get the current date and time. Use this to know what day it is when generating daily summaries.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        const now = new Date();
+        return {
+          date: now.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          }),
+          iso: now.toISOString(),
+          timestamp: now.getTime(),
+        };
+      },
+    }),
+    webSearch: tool({
+      description: "Search the web for recent news articles and information. Use this to find trending articles from credible media outlets like The Atlantic, New York Times, Wall Street Journal, etc. Returns actual article titles, URLs, authors, and publication dates.",
+      inputSchema: z.object({
+        query: z.string().describe("The search query for news articles"),
+        numResults: z.number().default(10).describe("Number of results to return (default: 10)"),
+      }),
+      execute: async ({ query, numResults }) => {
+        const exaApiKey = process.env.EXA_API_KEY;
+        if (!exaApiKey) {
+          return "Error: EXA_API_KEY environment variable not set. Please add it to .env.local or .env.production";
+        }
+
+        try {
+          const exa = new Exa(exaApiKey);
+          const result = await exa.searchAndContents(query, {
+            type: "neural",
+            useAutoprompt: true,
+            numResults,
+            text: { maxCharacters: 500 },
+            livecrawl: "always",
+          });
+
+          const articles = result.results.map((item: any) => ({
+            title: item.title,
+            url: item.url,
+            author: item.author || "Unknown",
+            publishedDate: item.publishedDate || "Date not available",
+            summary: item.text || "No summary available",
+            score: item.score,
+          }));
+
+          return JSON.stringify(articles, null, 2);
+        } catch (error) {
+          return `Error searching: ${error instanceof Error ? error.message : String(error)}`;
+        }
+      },
+    }),
   };
   
   const lastMessage = messages[messages.length - 1];
@@ -140,26 +195,65 @@ agent.on("chat", async ({ messages }) => {
 
   return streamText({
     model: "anthropic/claude-sonnet-4.5",
-    system: `You are a helpful Slack bot assistant.
+    system: `You are a news research assistant for The Female Quotient (FQ), focused on scanning credible media outlets for trending articles.
 
-## Your Capabilities
+## Daily News Summary Task
 
-You have access to Slack tools for reading messages, sending messages, reacting to messages, and posting to channels.
+Each morning, scan credible media outlets, magazines, and blogs for trending or widely shared articles. Focus on trustworthy reporting over social virality.
 
-## Special Feature: Daily News Summaries
+## Focus Areas (FQ Pillars)
+- Friendship
+- Money
+- Women taking action
+- Taboo topics that should not be
+- Male advocates
+- Women's health
+- Parenthood
+- Caregiving
+- Workplace laws
+- Country laws affecting employees
 
-This agent is configured to automatically post daily news summaries. Here's how it works:
+## Output Format
 
-1. **Webhook Trigger**: The agent has a /daily-news webhook endpoint that gets triggered daily by a GitHub Action
-2. **Your Job**: When you receive news summary requests, you should:
-   - Research the latest news using available tools
-   - Create an engaging, well-formatted summary
-   - Use emojis and Slack formatting to make it readable
-   - Use the postToSlackChannel tool to post the summary to the specified channel
+For each article include:
+- Title, Publication, Author (if available), Link, and Publication Date
+- A 2-3 sentence summary of the main takeaway and relevance
+- Pillar Tags: List the relevant pillars (e.g., Money, Parenthood)
+- Trend Signal: Note if it has been widely shared, cited, or tied to a larger cultural/policy moment
+- Cross-Platform Context: Mention if it is driving engagement on LinkedIn, Instagram, or TikTok and how
+- Strategic Insight: Add 2-3 bullets on why it matters for The Female Quotient community and how it could inspire discussion or new ideas
+
+## Example Output Format
+
+Top articles for today, January 15, 2025:
+
+1. **"Why Women Are Reimagining Friendship in Midlife"**
+*The Atlantic – Amanda Mull*
+https://www.theatlantic.com/example
+Explores how women are redefining friendship post-pandemic, prioritizing honesty and mutual support.
+
+**Pillar(s):** Friendship
+**Trend Signal:** Widely shared on LinkedIn; cited in multiple newsletters
+**Cross-Platform:** TikTok videos on intentional friendship
+**Strategic Insight:**
+- Reflects evolving definitions of community and care
+- Could inspire FQ dialogue around emotional connection and belonging
+
+## CRITICAL: Output Requirements
+
+- Do NOT add any preamble at the top of your response
+- The response should start IMMEDIATELY with: "Top articles for today, [date]:"
+- Then list 5-10 articles in the format above
+- Use getCurrentDate tool FIRST to know what day it is
+- Use the webSearch tool to find trending articles from credible sources
+- **NEVER fabricate or hallucinate URLs, article titles, authors, or content**
+- Only include articles that you have actual information about from search results
+- If you cannot find real articles, say so rather than making them up
+- After creating the summary, use postToSlackChannel to post it
 
 ## How to Interact
 
-Users can @mention you in channels or send you direct messages. Always be helpful, concise, and use Slack's rich formatting when appropriate.`,
+When users mention you in channels or send direct messages, be helpful and concise. For daily news summary requests triggered by the webhook, follow the exact format above.`,
     messages: convertToModelMessages(messages, {
       ignoreIncompleteToolCalls: true,
       tools,
