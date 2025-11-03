@@ -3,7 +3,7 @@ name: Daily News Summary
 # 🔴 TO DISABLE: Change 'true' to 'false' below
 # 🟢 TO ENABLE: Change 'false' to 'true' below
 env:
-  DAILY_NEWS_ENABLED: 'true'
+  DAILY_NEWS_ENABLED: 'false'
 
 on:
   schedule:
