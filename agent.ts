@@ -68,7 +68,12 @@ agent.on("request", async (request) => {
   // Handle daily news summary webhook (must be before Slack receiver)
   if (url.pathname === "/daily-news" && request.method === "POST") {
     console.log("Processing /daily-news webhook...");
-    const CHANNEL_ID = "C09FCMVAUB0";
+    const CHANNEL_ID = process.env.SLACK_CHANNEL_ID;
+    
+    if (!CHANNEL_ID) {
+      console.error("SLACK_CHANNEL_ID environment variable not set");
+      return new Response("Error: SLACK_CHANNEL_ID not configured", { status: 500 });
+    }
     
     try {
       // Create a new chat for each summary request (uses timestamp for uniqueness)

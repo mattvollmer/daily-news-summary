@@ -1,5 +1,10 @@
 name: Daily News Summary
 
+# 🔴 TO DISABLE: Change 'true' to 'false' below
+# 🟢 TO ENABLE: Change 'false' to 'true' below
+env:
+  DAILY_NEWS_ENABLED: 'true'
+
 on:
   schedule:
     # Run at 9:00 AM ET (13:00 UTC during EST, 14:00 UTC during EDT)
@@ -11,7 +16,19 @@ jobs:
   post-news-summary:
     runs-on: ubuntu-latest
     steps:
+      - name: Check if enabled
+        id: check
+        run: |
+          if [ "${{ env.DAILY_NEWS_ENABLED }}" = "true" ]; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+            echo "✅ Daily news summary is ENABLED"
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+            echo "🔴 Daily news summary is DISABLED - skipping"
+          fi
+      
       - name: Trigger Daily News Summary
+        if: steps.check.outputs.enabled == 'true'
         run: |
           curl -X POST \
             -H "Content-Type: application/json" \
